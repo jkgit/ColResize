@@ -267,7 +267,6 @@ $.fn.dataTableExt.oApi.fnColReorder = function ( oSettings, iFrom, iTo )
 		if ( $.isArray( oSettings.aoData[i]._aData ) ) {
 		  fnArraySwitch( oSettings.aoData[i]._aData, iFrom, iTo );
 		}
-		
 		/* Datatables 1.10 does not have the _anHidden fields */
 		if ( oSettings.aoData[i]._anHidden) {
 			fnArraySwitch( oSettings.aoData[i]._anHidden, iFrom, iTo );
