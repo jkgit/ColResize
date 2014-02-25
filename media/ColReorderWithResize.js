@@ -217,6 +217,20 @@ $.fn.dataTableExt.oApi.fnColReorder = function ( oSettings, iFrom, iTo )
 			fnDomSwitch( nTrs[i], iVisibleIndex, iInsertBeforeIndex );
 		}
 		
+		 /* Hidden Header
+         *   Determine if ScrollX is enabled, if so, also switch the columns in the hidden positioning row
+         */
+		var scrollXEnabled=oSettings.oInit.sScrollX === "" ? false:true;
+		if (scrollXEnabled) {
+			var scrollBodyHeader = $('thead', $(oSettings.nScrollBody));
+			nTrs = scrollBodyHeader[0].getElementsByTagName('tr');
+			for ( i=0, iLen=nTrs.length ; i<iLen ; i++ )
+			{
+				fnDomSwitch( nTrs[i], iVisibleIndex, iInsertBeforeIndex );
+			}
+		}
+
+		
 		/* Footer */
 		if ( oSettings.nTFoot !== null )
 		{
@@ -253,7 +267,10 @@ $.fn.dataTableExt.oApi.fnColReorder = function ( oSettings, iFrom, iTo )
 		if ( $.isArray( oSettings.aoData[i]._aData ) ) {
 		  fnArraySwitch( oSettings.aoData[i]._aData, iFrom, iTo );
 		}
-		fnArraySwitch( oSettings.aoData[i]._anHidden, iFrom, iTo );
+		/* Datatables 1.10 does not have the _anHidden fields */
+		if ( oSettings.aoData[i]._anHidden) {
+			fnArraySwitch( oSettings.aoData[i]._anHidden, iFrom, iTo );
+		}
 	}
 	
 	/* Reposition the header elements in the header layout array */
@@ -862,21 +879,24 @@ ColReorder.prototype = {
 						visibleColumnIndex++;
 				}
 
-				//Get the scroller's div
-				tableScroller = $('div.dataTables_scrollBody', this.s.dt.nTableWrapper)[0];
-				
-				//Get the table
-				scrollingTableHead = $(tableScroller)[0].childNodes[0].childNodes[0].childNodes[0];
-				
+				//Get the scroller's table
+                // don't use childNodes method because there are text nodes in chrome
+  				var scrollingTable = $('div.dataTables_scrollBody table');
+  				
+  				//Get the table
+  				// don't use childNodes because there are text nodes in chrome
+  				var scrollingTableHeadRow = $('thead tr', scrollingTable);
+
 				//Resize the columns
 				if (moveLength != 0 && !scrollXEnabled){
-					$($(scrollingTableHead)[0].childNodes[visibleColumnIndex+1]).width(this.s.mouse.nextStartWidth - moveLength);
+					$(scrollingTableHeadRow[0].childNodes[visibleColumnIndex+1]).width(this.s.mouse.nextStartWidth - moveLength);
 				}
-				$($(scrollingTableHead)[0].childNodes[visibleColumnIndex]).width(this.s.mouse.startWidth + moveLength);
+				$(scrollingTableHeadRow[0].childNodes[visibleColumnIndex]).width(this.s.mouse.startWidth + moveLength);
 				
-				//Resize the table too
-				if(scrollXEnabled)
-					$($(tableScroller)[0].childNodes[0]).width(this.table_size + moveLength);
+                //Resize the table too
+                if (scrollXEnabled) {
+					scrollingTable.width(this.table_size + moveLength);
+                }
 			}
 		  }
 		  ////////////////////////
