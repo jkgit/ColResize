@@ -429,7 +429,16 @@ ColReorder = function( oDTSettings, oOpts )
 		 *  @type     array
 		 *  @default  []
 		 */
-		"aoTargets": []
+		"aoTargets": [],
+		
+		/**
+         * Minimum width for columns (in pixels)
+         * Default is 10. If set to 0, columns can be resized to nothingness.
+         * @property minResizeWidth
+         * @type     integer
+         * @default  10
+         */
+         "minResizeWidth": 10
 	};
 	
 	
@@ -461,11 +470,9 @@ ColReorder = function( oDTSettings, oOpts )
 		 */
 		"pointer": null
 	};
-
-	/////////////////
-	//Martin Marchetta: keep the current table's size in order to resize it if columns are resized and scrollX is enabled
-	this.table_size = -1;
-	/////////////////
+	
+	/* Store the scrollBodyTableHeadRow so we only have to find it once */
+	this.scrollBodyTableHeadRow=null;
 	
 	/* Constructor logic */
 	this.s.dt = oDTSettings.oInstance.fnSettings();
@@ -524,6 +531,10 @@ ColReorder.prototype = {
 		{
 			this.s.allowResize = this.s.init.allowResize;
 		}
+
+        if (typeof this.s.init.minResizeWidth != 'undefined') {
+            this.s.minResizeWidth = this.s.init.minResizeWidth;
+        }
 		
 		/* Columns discounted from reordering - counting left to right */
 		if ( typeof this.s.init.iFixedColumns != 'undefined' )
@@ -834,72 +845,71 @@ ColReorder.prototype = {
 	"_fnMouseMove": function ( e, colResized )
 	{
 		var that = this;
-		
-		////////////////////
-		//Martin Marchetta: Determine if ScrollX is enabled
-		var scrollXEnabled;
-		
-		scrollXEnabled = this.s.dt.oInit.sScrollX === "" ? false:true;
-	
-		//Keep the current table's width (used in case sScrollX is enabled to resize the whole table, giving an Excel-like behavior)
-		if(this.table_size < 0 && scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
-			if($('div.dataTables_scrollHead', this.s.dt.nTableWrapper).length > 0)
-				this.table_size = $($('div.dataTables_scrollHead', this.s.dt.nTableWrapper)[0].childNodes[0].childNodes[0]).width();
-		}
-		////////////////////
 	
 		/* are we resizing a column ? */
 		if (this.dom.resize) {       
 		  var nTh = this.s.mouse.resizeElem;
 		  var nThNext = $(nTh).next();
 		  var moveLength = e.pageX-this.s.mouse.startX; 
-		  if (moveLength != 0 && !scrollXEnabled)
-			$(nThNext).width(this.s.mouse.nextStartWidth - moveLength);
-		  $(nTh).width(this.s.mouse.startWidth + moveLength);
-			  
-		  //Martin Marchetta: Resize the header too (if sScrollX is enabled)
-		  if(scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
-			if($('div.dataTables_scrollHead', this.s.dt.nTableWrapper).length > 0)
-				$($('div.dataTables_scrollHead', this.s.dt.nTableWrapper)[0].childNodes[0].childNodes[0]).width(this.table_size + moveLength);
-		  }
-			  
-		  ////////////////////////
-		  //Martin Marchetta: Fixed col resizing when the scroller is enabled.
-		  var visibleColumnIndex;
-		  //First determine if this plugin is being used along with the smart scroller...
-		  if($('div.dataTables_scrollBody') != null){
-			//...if so, when resizing the header, also resize the table's body (when enabling the Scroller, the table's header and
-			//body are split into different tables, so the column resizing doesn't work anymore)
-			if($('div.dataTables_scrollBody').length > 0){
-				//Since some columns might have been hidden, find the correct one to resize in the table's body
-				var currentColumnIndex;
-				visibleColumnIndex = -1;
-				for(currentColumnIndex=-1; currentColumnIndex < this.s.dt.aoColumns.length-1 && currentColumnIndex != colResized; currentColumnIndex++){
-					if(this.s.dt.aoColumns[currentColumnIndex+1].bVisible)
-						visibleColumnIndex++;
-				}
 
-				//Get the scroller's table
-                // don't use childNodes method because there are text nodes in chrome
-  				var scrollingTable = $('div.dataTables_scrollBody table');
-  				
-  				//Get the table
-  				// don't use childNodes because there are text nodes in chrome
-  				var scrollingTableHeadRow = $('thead tr', scrollingTable);
-
-				//Resize the columns
-				if (moveLength != 0 && !scrollXEnabled){
-					$(scrollingTableHeadRow[0].childNodes[visibleColumnIndex+1]).width(this.s.mouse.nextStartWidth - moveLength);
+		var scrollXEnabled = this.s.dt.oInit.sScrollX === "" ? false: true;
+		  
+        var newWidth = this.s.mouse.startWidth + moveLength;
+		var minResizeWidth=this.s.minResizeWidth;
+		if (minResizeWidth=="initial") {
+			minResizeWidth=this.s.dt.aoColumns[colResized].sWidthOrig;
+			if (minResizeWidth!=null) {
+				// try to cache the parsed value so we don't have to do this every event
+				minResizeWidth=this.s.dt.aoColumns[colResized].sWidthOrigInt;
+				if (minResizeWidth==null) {
+					// grab the string version
+					minResizeWidth=this.s.dt.aoColumns[colResized].sWidthOrig;	  
+					// remove px and parse to an int
+					minResizeWidth=parseInt(minResizeWidth.substring(0, minResizeWidth.length -2));
+					// save for next time
+					this.s.dt.aoColumns[colResized].sWidthOrigInt=minResizeWidth;
 				}
-				$(scrollingTableHeadRow[0].childNodes[visibleColumnIndex]).width(this.s.mouse.startWidth + moveLength);
-				
-                //Resize the table too
-                if (scrollXEnabled) {
-					scrollingTable.width(this.table_size + moveLength);
-                }
 			}
+		}
+		  
+		// enforce a minimum width, should allow "initial" which uses sWidth set in init
+        if (newWidth < minResizeWidth) {
+        	newWidth = minResizeWidth;
+            moveLength = newWidth - this.s.mouse.startWidth ;
+        }
+          
+		if (moveLength != 0 && !scrollXEnabled)
+			$(nThNext).width(this.s.mouse.nextStartWidth - moveLength);
+		$(nTh).width(this.s.mouse.startWidth + moveLength);
+			  
+		//Fixed col resizing when the scroller is enabled.
+		var visibleColumnIndex;
+		//First determine if this plugin is being used along with the smart scroller...
+		if(this.s.dt.nScrollBody != null){
+			//Since some columns might have been hidden, find the correct one to resize in the table's body
+			var currentColumnIndex;
+			visibleColumnIndex = -1;
+			for(currentColumnIndex=-1; currentColumnIndex < this.s.dt.aoColumns.length-1 && currentColumnIndex != colResized; currentColumnIndex++){
+				if(this.s.dt.aoColumns[currentColumnIndex+1].bVisible)
+					visibleColumnIndex++;
+			}
+
+			// find the table head row of the scroll body.  prefer the one set by a modified datatables.
+			this.scrollBodyTableHeadRow=this.s.dt.nHiddenHeaderRow[0];
+			// if datatables did not supply it, then find it ourselves from the scrollBody.  caching it has the disadvantage
+			// that if the user sorts the cached table header will be the wrong one.
+			if (this.scrollBodyTableHeadRow==null) {
+				// use the nScrollBody set by dataTables to find 
+				var scrollingTableHead = this.s.dt.nScrollBody.getElementsByTagName('thead')[0];
+				this.scrollBodyTableHeadRow = scrollingTableHead.getElementsByTagName('tr')[0];
+			}
+
+			//Resize the data columns via the hidden header row
+			if (moveLength != 0 && !scrollXEnabled){
+				$(this.scrollBodyTableHeadRow.childNodes[visibleColumnIndex+1]).width(this.s.mouse.nextStartWidth - moveLength);
+			}
+			$(this.scrollBodyTableHeadRow.childNodes[visibleColumnIndex]).width(this.s.mouse.startWidth + moveLength);
 		  }
-		  ////////////////////////
 			  
 		  return;
 		}
@@ -1038,10 +1048,10 @@ ColReorder.prototype = {
 			}			
 			
 			//Update the internal storage of the table's width (in case we changed it because the user resized some column and scrollX was enabled
-			if(scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
+			/*if(scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
 				if($('div.dataTables_scrollHead', this.s.dt.nTableWrapper).length > 0)
 					this.table_size = $($('div.dataTables_scrollHead', this.s.dt.nTableWrapper)[0].childNodes[0].childNodes[0]).width();
-			}
+			}*/
 			
 			//Save the state
 			this.s.dt.oInstance.oApi._fnSaveState( this.s.dt );
