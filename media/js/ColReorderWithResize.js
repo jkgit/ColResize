@@ -15,6 +15,7 @@
  *     table is resized to give an Excel-like behavior (good suggestion by Allan)
  * Modified:    February 2012 by Christophe Battarel - christophe.battarel@altairis.fr (ColReorder v1.0.5 adaptation)
  * Modified:    September 16th 2012 by Hassan Kamara - h@phrmc.com
+ * Modified:	February 26th 2014 by Jay kraly -jaykraly@gmail.com
  * Language:    Javascript
  * License:     GPL v2 or BSD 3 point style
  * Project:     DataTables
@@ -217,6 +218,20 @@ $.fn.dataTableExt.oApi.fnColReorder = function ( oSettings, iFrom, iTo )
 			fnDomSwitch( nTrs[i], iVisibleIndex, iInsertBeforeIndex );
 		}
 		
+		 /* Hidden Header
+         *   Determine if ScrollX is enabled, if so, also switch the columns in the hidden positioning row
+         */
+		var scrollXEnabled=oSettings.oInit.sScrollX === "" ? false:true;
+		if (scrollXEnabled) {
+			var scrollBodyHeader = $('thead', $(oSettings.nScrollBody));
+			nTrs = scrollBodyHeader[0].getElementsByTagName('tr');
+			for ( i=0, iLen=nTrs.length ; i<iLen ; i++ )
+			{
+				fnDomSwitch( nTrs[i], iVisibleIndex, iInsertBeforeIndex );
+			}
+		}
+
+		
 		/* Footer */
 		if ( oSettings.nTFoot !== null )
 		{
@@ -253,7 +268,10 @@ $.fn.dataTableExt.oApi.fnColReorder = function ( oSettings, iFrom, iTo )
 		if ( $.isArray( oSettings.aoData[i]._aData ) ) {
 		  fnArraySwitch( oSettings.aoData[i]._aData, iFrom, iTo );
 		}
-		fnArraySwitch( oSettings.aoData[i]._anHidden, iFrom, iTo );
+		/* Datatables 1.10 does not have the _anHidden fields */
+		if ( oSettings.aoData[i]._anHidden) {
+			fnArraySwitch( oSettings.aoData[i]._anHidden, iFrom, iTo );
+		}
 	}
 	
 	/* Reposition the header elements in the header layout array */
@@ -412,7 +430,42 @@ ColReorder = function( oDTSettings, oOpts )
 		 *  @type     array
 		 *  @default  []
 		 */
-		"aoTargets": []
+		"aoTargets": [],
+		
+		/**
+         * Minimum width for columns (in pixels)
+         * Default is 10. If set to 0, columns can be resized to nothingness.
+         * @property minResizeWidth
+         * @type     integer
+         * @default  10
+         */
+         "minResizeWidth": 10,
+
+         /**
+         * Method to use for dealing with change in column size.  Choices are :
+         *  greedy - as column gets bigger, take space from the neighbor, eventually push the table wider
+         *  layout - set table-layout to fixed and width to auto, let browser expand the grid.
+         *  		 layout should be faster than setting the width of the table ourselves
+         *  table - add width to the parent table as column gets larger. should work like layout but
+         *  		 a little slower on older browsers like IE8
+         * 
+         * @property resizeStyle
+         * @type     string
+         * @default  greedy
+         */
+         "resizeStyle": "greedy",
+
+
+         /**
+         * Callback called after each time the table is resized
+         * This could be multiple times on one mouse move.
+         * useful for resizing a containing element.
+         * Passed the table element, new size, and the size change
+         * @property fnResizeTableCallback
+         * @type     function
+         * @default  function(table, newSize, sizeChange) {}
+         */
+         "fnResizeTableCallback": function(){}
 	};
 	
 	
@@ -444,21 +497,36 @@ ColReorder = function( oDTSettings, oOpts )
 		 */
 		"pointer": null
 	};
-
-	/////////////////
-	//Martin Marchetta: keep the current table's size in order to resize it if columns are resized and scrollX is enabled
-	this.table_size = -1;
-	/////////////////
+	
+	/* Store the table size */
+    this.table_size = -1;
+    
+    /* Store the header scrollHeadTableHeadRow so we only have to find it once */
+    this.scrollHeadTableHeadRow=null;
+    
+	/* Store the scrollBodyTableHeadRow so we only have to find it once */
+	this.scrollBodyTableHeadRow=null;
 	
 	/* Constructor logic */
 	this.s.dt = oDTSettings.oInstance.fnSettings();
 	this._fnConstruct();
 
+	/* Add draw callback */
+	oDTSettings.oApi._fnCallbackReg(oDTSettings, 'aoDrawCallback', jQuery.proxy(this._fnDraw, this), 'ColReorder');
+	
 	/* Add destroy callback */
 	oDTSettings.oApi._fnCallbackReg(oDTSettings, 'aoDestroyCallback', jQuery.proxy(this._fnDestroy, this), 'ColReorder');
 	
 	/* Store the instance for later use */
 	ColReorder.aoInstances.push( this );
+
+    // Set table layout fixed for layout and greedy resizeStyle.  The data table doesn't change with greedy style
+	// if layout is not fixed.  The resizeStyle table works ok without it.
+    if (this.s.resizeStyle=="layout" || this.s.resizeStyle=="greedy") {
+        $(this.s.dt.nTable).css('table-layout','fixed');
+        $('.dataTables_scrollHead table').css('table-layout','fixed');
+    }
+    
 	return this;
 };
 
@@ -507,6 +575,18 @@ ColReorder.prototype = {
 		{
 			this.s.allowResize = this.s.init.allowResize;
 		}
+
+        if (typeof this.s.init.minResizeWidth != 'undefined') {
+            this.s.minResizeWidth = this.s.init.minResizeWidth;
+        }
+
+        if (typeof this.s.init.resizeStyle != 'undefined') {
+            this.s.resizeStyle = this.s.init.resizeStyle;
+        }
+
+        if (typeof this.s.init.fnResizeTableCallback == 'function') {
+            this.s.fnResizeTableCallback = this.s.init.fnResizeTableCallback;
+        }
 		
 		/* Columns discounted from reordering - counting left to right */
 		if ( typeof this.s.init.iFixedColumns != 'undefined' )
@@ -817,75 +897,122 @@ ColReorder.prototype = {
 	"_fnMouseMove": function ( e, colResized )
 	{
 		var that = this;
-		
-		////////////////////
-		//Martin Marchetta: Determine if ScrollX is enabled
-		var scrollXEnabled;
-		
-		scrollXEnabled = this.s.dt.oInit.sScrollX === "" ? false:true;
-	
-		//Keep the current table's width (used in case sScrollX is enabled to resize the whole table, giving an Excel-like behavior)
-		if(this.table_size < 0 && scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
-			if($('div.dataTables_scrollHead', this.s.dt.nTableWrapper).length > 0)
-				this.table_size = $($('div.dataTables_scrollHead', this.s.dt.nTableWrapper)[0].childNodes[0].childNodes[0]).width();
-		}
-		////////////////////
 	
 		/* are we resizing a column ? */
-		if (this.dom.resize) {       
-		  var nTh = this.s.mouse.resizeElem;
-		  var nThNext = $(nTh).next();
-		  var moveLength = e.pageX-this.s.mouse.startX; 
-		  if (moveLength != 0 && !scrollXEnabled)
-			$(nThNext).width(this.s.mouse.nextStartWidth - moveLength);
-		  $(nTh).width(this.s.mouse.startWidth + moveLength);
-			  
-		  //Martin Marchetta: Resize the header too (if sScrollX is enabled)
-		  if(scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
-			if($('div.dataTables_scrollHead', this.s.dt.nTableWrapper).length > 0)
-				$($('div.dataTables_scrollHead', this.s.dt.nTableWrapper)[0].childNodes[0].childNodes[0]).width(this.table_size + moveLength);
-		  }
-			  
-		  ////////////////////////
-		  //Martin Marchetta: Fixed col resizing when the scroller is enabled.
-		  var visibleColumnIndex;
-		  //First determine if this plugin is being used along with the smart scroller...
-		  if($('div.dataTables_scrollBody') != null){
-			//...if so, when resizing the header, also resize the table's body (when enabling the Scroller, the table's header and
-			//body are split into different tables, so the column resizing doesn't work anymore)
-			if($('div.dataTables_scrollBody').length > 0){
-				//Since some columns might have been hidden, find the correct one to resize in the table's body
-				var currentColumnIndex;
-				visibleColumnIndex = -1;
-				for(currentColumnIndex=-1; currentColumnIndex < this.s.dt.aoColumns.length-1 && currentColumnIndex != colResized; currentColumnIndex++){
-					if(this.s.dt.aoColumns[currentColumnIndex+1].bVisible)
-						visibleColumnIndex++;
-				}
+		if (this.dom.resize) {
+			var nTh = this.s.mouse.resizeElem;
+			var nThNext = $(nTh).next();
+			var moveLength = e.pageX-this.s.mouse.startX; 
 
-				//Get the scroller's div
-				tableScroller = $('div.dataTables_scrollBody', this.s.dt.nTableWrapper)[0];
-				
-				//Get the table
-				scrollingTableHead = $(tableScroller)[0].childNodes[0].childNodes[0].childNodes[0];
-				
-				//Resize the columns
-				if (moveLength != 0 && !scrollXEnabled){
-					$($(scrollingTableHead)[0].childNodes[visibleColumnIndex+1]).width(this.s.mouse.nextStartWidth - moveLength);
+			var scrollXEnabled = this.s.dt.sScrollX === undefined ? false: true;
+		  
+			var newWidth = this.s.mouse.startWidth + moveLength;
+			var minResizeWidth=this.s.minResizeWidth;
+			if (minResizeWidth=="initial") {
+				minResizeWidth=this.s.dt.aoColumns[colResized].sWidthOrig;
+				if (minResizeWidth!=null) {
+					// try to cache the parsed value so we don't have to do this every event
+					minResizeWidth=this.s.dt.aoColumns[colResized].sWidthOrigInt;
+					if (minResizeWidth==null) {
+						// grab the string version
+						minResizeWidth=this.s.dt.aoColumns[colResized].sWidthOrig;	  
+						// remove px and parse to an int
+						minResizeWidth=parseInt(minResizeWidth.substring(0, minResizeWidth.length -2));
+						// save for next time
+						this.s.dt.aoColumns[colResized].sWidthOrigInt=minResizeWidth;
+					}
 				}
-				$($(scrollingTableHead)[0].childNodes[visibleColumnIndex]).width(this.s.mouse.startWidth + moveLength);
-				
-				//Resize the table too
-				if(scrollXEnabled)
-					$($(tableScroller)[0].childNodes[0]).width(this.table_size + moveLength);
 			}
-		  }
-		  ////////////////////////
-			  
-		  return;
+		  
+			// enforce a minimum width, should allow "initial" which uses sWidth set in init
+	        if (newWidth < minResizeWidth) {
+	        	newWidth = minResizeWidth;
+	            moveLength = newWidth - this.s.mouse.startWidth ;
+	        }
+	        
+			if (moveLength != 0) {
+				// if resize style is greedy resize the column next to the column that is being resized
+				if (this.s.resizeStyle=="greedy") {
+					$(nThNext).width(this.s.mouse.nextStartWidth - moveLength);
+				}
+				
+				// resize the actual column
+				$(nTh).width(this.s.mouse.startWidth + moveLength);
+			
+				// handle the tables involved if we are scrolling x or y
+				if(this.s.dt.nScrollBody){
+					//Since some columns might have been hidden, find the correct one to resize in the table's body			
+					var visibleColumnIndex;
+					var currentColumnIndex;
+					visibleColumnIndex = -1;
+					for(currentColumnIndex=-1; currentColumnIndex < this.s.dt.aoColumns.length-1 && currentColumnIndex != colResized; currentColumnIndex++){
+						if(this.s.dt.aoColumns[currentColumnIndex+1].bVisible)
+							visibleColumnIndex++;
+					}
+		
+					// find the table head row of the scroll body.  prefer the one set by a modified datatables.
+					var scrollBodyTableHeadRow=this.s.dt.nHiddenHeaderRow[0];
+					// if datatables did not supply it, then find it ourselves from the scrollBody.  not caching it
+					// since sorting a table will create a new hidden header
+					if (scrollBodyTableHeadRow==null) {
+						// use the nScrollBody set by dataTables to find 
+						var scrollingTableHead = this.s.dt.nScrollBody.getElementsByTagName('thead')[0];
+						scrollBodyTableHeadRow = scrollingTableHead.getElementsByTagName('tr')[0];
+					}
+					
+					// Resize the hidden header row in the body, this will cause the data rows to be resized
+					//  if resize style is greedy, change the size of the next column
+					if (moveLength != 0 && this.s.resizeStyle=="greedy"){
+						$(scrollBodyTableHeadRow.childNodes[visibleColumnIndex+1]).width(this.s.mouse.nextStartWidth - moveLength);
+					}
+					// resize the actual th in the hidden header row
+					$(scrollBodyTableHeadRow.childNodes[visibleColumnIndex]).width(this.s.mouse.startWidth + moveLength);
+					
+					// if resize style is table, change the size of the body table to account for the new size of the column
+					if (this.s.resizeStyle=="table") {
+						// find the table head row of the header.  prefer any cached header 
+		            	if (this.scrollHeadTableHeadRow==null) {
+		            		// if not found, prefer the one set by a modified datatables.
+		            		this.scrollHeadTableHeadRow=this.s.dt.nVisibleHeaderRow[0];
+							// if datatables did not supply it, then find it ourselves from the scrollHead.  
+							if (this.scrollHeadTableHeadRow==null) {
+								// use the nScrollHead set by dataTables to find 
+								var visibleTableHead = this.s.dt.nScrollHead.getElementsByTagName('thead')[0];
+								this.scrollHeadTableHeadRow = visibleTableHead.getElementsByTagName('tr')[0];
+							}
+		            	}
+		            	
+		            	// resize the table in the scroll header
+						if (this.scrollHeadTableHeadRow!=null) {
+							$headerTable = $(this.scrollHeadTableHeadRow.parentNode.parentNode);
+			            	//Keep the current table's width so that we can increase the original table width by the mouse move length
+			                if (this.table_size < 0) {
+			                    this.table_size = $headerTable.width();
+			                }
+			                $headerTable.width(this.table_size + moveLength);
+							
+							// and resize the table in the scroll body
+							$(this.s.dt.nTable).width(this.table_size + moveLength);
+		            	}
+		            }
+					this.s.fnResizeTableCallback($(this.s.dt.nTable),$(this.s.dt.nTable).width(),moveLength);
+				}
+				// resize style is table and no scroll x, so just resize the table
+				else if (this.s.resizeStyle=="table") {
+					//Keep the current table's width so that we can increase the original table width by the mouse move length
+	                if (this.table_size < 0) {
+	                    this.table_size = $(this.s.dt.nTable).width();
+	                }
+				   var newTableWidth = this.table_size + moveLength;
+                   $(this.s.dt.nTable).width(newTableWidth);
+                   this.s.fnResizeTableCallback($(this.s.dt.nTable),newTableWidth,moveLength);
+				}
+			}
+				  
+			return;
 		}
 		else if (this.s.allowReorder) {
-			if ( this.dom.drag === null )
-			{
+			if ( this.dom.drag === null ) {
 				/* Only create the drag element if the mouse has moved a specific distance from the start
 				 * point - this allows the user to make small mouse movements when sorting and not have a
 				 * possibly confusing drag element showing up
@@ -898,7 +1025,7 @@ ColReorder.prototype = {
 				}
 				this._fnCreateDragNode();
 			}
-			
+				
 			/* Position the element - we respect where in the element the click occured */
 			this.dom.drag.style.left = (e.pageX - this.s.mouse.offsetX) + "px";
 			this.dom.drag.style.top = (e.pageY - this.s.mouse.offsetY) + "px";
@@ -915,7 +1042,7 @@ ColReorder.prototype = {
 					break;
 				}
 			}
-			
+				
 			/* The insert element wasn't positioned in the array (less than operator), so we put it at 
 			 * the end
 			 */
@@ -1018,10 +1145,10 @@ ColReorder.prototype = {
 			}			
 			
 			//Update the internal storage of the table's width (in case we changed it because the user resized some column and scrollX was enabled
-			if(scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
+			/*if(scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
 				if($('div.dataTables_scrollHead', this.s.dt.nTableWrapper).length > 0)
 					this.table_size = $($('div.dataTables_scrollHead', this.s.dt.nTableWrapper)[0].childNodes[0].childNodes[0]).width();
-			}
+			}*/
 			
 			//Save the state
 			this.s.dt.oInstance.oApi._fnSaveState( this.s.dt );
@@ -1116,6 +1243,21 @@ ColReorder.prototype = {
 
 		this.s.dt.oInstance._oPluginColReorder = null;
 		this.s = null;
+	},
+	
+	/**
+	 * Set the table width to auto so that expanding a column will not scrunch other cols
+	 * It is necessary to set the width first to force it wide enough to scroll, then set to auto so that the cols
+	 * aren't scrunchable.
+	 * 
+	 *  @method  _fnDraw
+	 *  @returns void
+	 *  @private
+	 */
+	"_fnDraw": function ()
+	{
+		$(".dataTables_scrollHead table").width("auto");
+		$(".dataTables_scrollBody table").width("auto");
 	}
 };
 

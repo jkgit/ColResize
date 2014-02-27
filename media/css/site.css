@@ -1,0 +1,42 @@
+/* Make sure we can see the entire tool bar, otherwise if it is two lines high the background
+   only shows on one line */
+div.fg-toolbar { 
+	font-size: 0.8em;
+	overflow:auto;
+}
+
+/* Remove padding and margins so there is no extra space to squash as table is resized.
+   Otherwise the columns will resize slightly even if they are not the column being resized */
+div.dataTables_wrapper th, div.dataTables_wrapper td {
+    padding: 0;
+    margin: 0;
+}
+
+/* Make sure the table (inside it's scroll div) is aligned to the left, otherwise it will
+   shift as the table expands/contracts */
+table.display {
+	margin:0;
+}
+
+/* Tell the browser not to expand columns to max width of longest entry */
+table.display td {
+  overflow: hidden; /* this is what fixes the expansion */
+  text-overflow: ellipsis; /* not supported in all browsers, but I accepted the tradeoff */
+  white-space: nowrap;
+}
+
+/* set visibility hidden for IE which doesn't honor the height:0px */
+.dataTables_scrollBody table thead { 
+	visibility:hidden
+}
+
+.dataTables_scroll {
+	width:100%;
+}
+
+/* Style the data cells */
+table.display td {
+  border: 0;
+  font-family:Tahoma;
+  font-size:11px;
+}
