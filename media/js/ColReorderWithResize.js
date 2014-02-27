@@ -511,7 +511,7 @@ ColReorder = function( oDTSettings, oOpts )
 	this.s.dt = oDTSettings.oInstance.fnSettings();
 	this._fnConstruct();
 
-	/* Add destroy callback */
+	/* Add draw callback */
 	oDTSettings.oApi._fnCallbackReg(oDTSettings, 'aoDrawCallback', jQuery.proxy(this._fnDraw, this), 'ColReorder');
 	
 	/* Add destroy callback */
@@ -520,7 +520,8 @@ ColReorder = function( oDTSettings, oOpts )
 	/* Store the instance for later use */
 	ColReorder.aoInstances.push( this );
 
-    // fix the width and add table layout fixed. 
+    // Set table layout fixed for layout and greedy resizeStyle.  The data table doesn't change with greedy style
+	// if layout is not fixed.  The resizeStyle table works ok without it.
     if (this.s.resizeStyle=="layout" || this.s.resizeStyle=="greedy") {
         $(this.s.dt.nTable).css('table-layout','fixed');
         $('.dataTables_scrollHead table').css('table-layout','fixed');
@@ -899,7 +900,6 @@ ColReorder.prototype = {
 	
 		/* are we resizing a column ? */
 		if (this.dom.resize) {
-			var resizeTable=this.s.bResizeHeader;
 			var nTh = this.s.mouse.resizeElem;
 			var nThNext = $(nTh).next();
 			var moveLength = e.pageX-this.s.mouse.startX; 
@@ -1246,7 +1246,7 @@ ColReorder.prototype = {
 	},
 	
 	/**
-	 * If resize style is layout set the table width to auto so that expanding a column will not scrunch other cols
+	 * Set the table width to auto so that expanding a column will not scrunch other cols
 	 * It is necessary to set the width first to force it wide enough to scroll, then set to auto so that the cols
 	 * aren't scrunchable.
 	 * 
