@@ -1,0 +1,143 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<title>Test of ColReorderWithResize</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+	<script type="text/javascript" src="../js/jquery-1.11.0.js?appVer=${appVersion}"></script>
+	<script type="text/javascript" src="../js/jquery-ui-1.10.3.custom.js?appVer=${appVersion}"></script>
+	<script type="text/javascript" src="../js/jquery.dataTables.js"></script>
+	<script type="text/javascript" src="../js/ColReorderWithResize.js"></script>
+	<link rel="stylesheet" type="text/css" href="../css/jquery.dataTables-1.10.0-beta.2.css"/>
+	<link rel="stylesheet" type="text/css" href="../css/jquery.dataTables_themeroller-1.10.0-beta.2.css"/>
+	<link rel="stylesheet" type="text/css" href="../css/jquery-ui-1.10.3.custom.min.css"/>
+	<link rel="stylesheet" type="text/css" href="../css/ColReorder.css"/>
+	<link rel="stylesheet" type="text/css" href="../css/site.css"/>
+</head>
+
+<body>
+
+<script type="text/javascript">
+//<![CDATA[
+
+var urlLoad="${pageContext.request.contextPath}/grid/ajaxReviewDatatables4.action?payPlanCode=${payPlanCode}&expedited=${expedited}&searchType=${searchType}&searchTerm=${searchTerm}";
+
+var oTable;
+var throttled;
+
+function loadDefaultGrid() {
+		var jsonData = getData();
+		oTable = $('#gridtable').dataTable( {
+		   	"bProcessing": true,
+		   	"oLanguage": {
+		          "sProcessing": "loading data..."
+		  	} ,
+			"bJQueryUI": true,
+			"bAutoWidth": false,
+			"aaSorting": [],
+			"sScrollX" : "100%",
+    		"oColReorder": {
+        		"resizeStyle" : "table"
+    		},
+    	    "aaData": jsonData,  
+		   	/* no zebra striping */
+		   	"asStripeClasses":[],
+	        "bDeferRender": true,
+		   	"aLengthMenu": [
+		   	             [25, 50, 100, 200, -1],
+		   	             [25, 50, 100, 200, "All"]
+		   	         ], 
+		   	"iDisplayLength" : -1,
+		   	"sDom": 'T<"clear"><"H"RlfrC>tS<"F"iN>',
+		   	"sPaginationType": "full_numbers",
+		   	// set classes on row depending on data
+		   	"fnRowCallback": function( nRow, aData, iDisplayIndex ) {
+		   	},
+		    "fnInitComplete": function(oSettings, json) {		 					 		
+		   	}, "aoColumns": [
+		   		   	        { "sClass": "center", "sName" : 'rowOpener', "bSortable": false, "sWidth": "30px", "bVisible": false},
+		   					{"sTitle": '1xxx', "sName" : '1yyyy', "sWidth":"65px", align:"left"},
+		   					{"sTitle": '2xxxx', "sName" : '2yyyyyyyyy', "sWidth":"45px", align:"center"},
+		   	            {"sTitle": '3xxx', "sName" : '3yyyyyy', "sWidth":"40px", align:"center", resizable:true},
+		   						{"sTitle": '4xx xxxx', "sName" : '4yyyyyyyy', "sWidth":"125px", align:"left", fixed:true, resizable:true},
+		   						{"sTitle": '5xxxx xxxxx xxx', "sName" : '5yyyyyyyyyyyy', "sWidth":"145px", align:"left", resizable:true},
+		   						{"sTitle": '6xxxxxxx', "sName" : '6yyyyyyyyyyyyyy', "sWidth":"60px", align:"left", resizable:true},
+		   						{"sTitle": '7xxx', "sName" : '7yyyyyyyyyyyyyyy', "sWidth":"60px", align:"center", resizable:true},
+		   						{"sTitle": '8xxx%', "sName" : '8yyyyyyyy', "sWidth":"55px", align:"left", resizable:true},
+		   						{"sTitle": '9xxxxxxxx xxxxx', "sName" : '9yyyyyyyyyyy', "sWidth":"200px", align:"left", resizable:true},
+		   						{"sTitle": '10xxx xx', "sName" : '10yyyyyy', "sWidth":"55px", align:"center", resizable:true},
+		   						{"sTitle": '11xxx xx', "sName" : '11yyyyyy', "sWidth":"55px", align:"center", resizable:true},
+		   						{"sTitle": '12xxx xx', "sName" : '12yyyyyy', "sWidth":"55px", align:"center", resizable:true},
+		   						{"sTitle": '13xxx xx', "sName" : '13yyyyyy', "sWidth":"55px", align:"center", resizable:true},
+		   						{"sTitle": '14xxx %', "sName" : '14yyyyyy', "sWidth":"50px", align:"center", resizable:true},
+		   						{"sTitle": '15xxxx xx', "sName" : '15yyyyyyy', "sWidth":"55px", align:"center", resizable:true},
+		   						{"sTitle": '16xxxx xx', "sName" : '16yyyyyyy', "sWidth":"55px", align:"center", resizable:true},
+		   						{"sTitle": '17xxx xxx xxxxx', "sName" : '17yyyyyyyyyyyyy', "sWidth":"50px", align:"center", resizable:true},
+		   					    
+		   		  			{"sTitle": '18xxxx xxxxx', "sName" : '18yyyyyyyyyy', "sWidth":"50px", align:"center", resizable:true},
+		   					   {"sTitle": '19xxxxxxxxx', "sName" : '19yyyyyyyyy', "sWidth":"80px", align:"left"},
+		   		         		{"sTitle": '20xx xxxxxx xx', "sName" : '20yyyyyyyyy', "bVisible":false},
+		   		           	{"sTitle": '21xx xxxxxx xx', "sName" : '21yyyyyyyyy', "bVisible":false},
+		   		     			{"sTitle": '22xx xxxxxx xx', "sName" : '22yyyyyyyyy', "bVisible":false},
+		   		        		{"sTitle": '23xxx xxxxxx xx', "sName" : '23yyyyyyyyyy', "bVisible":false},
+		   		        		{"sTitle": '24xxx xxxxxx', "sName" : '24yyyyyyyyy', "sWidth":"45px", align:"center", "bVisible":false},
+		   		          	{"sTitle": '25xxxxxx xxxxx xxxx', "sName" : '25yyyyyyyyy', "bVisible":false},
+		   		          	{"sTitle": '26xxxxxxxxxxx xx', "sName" : '26yyyyyy', "bVisible":false},
+		   		          	{"sTitle": '27xxxxx xxxxxx', "sName" : '27yyyyyyyyy', "bVisible":false},
+		   		          	{"sTitle": '28xxxxxx xx', "sName" : '28yyyyyyyy', "bVisible":false},
+		   		          	{"sTitle": '29xx', "sName" : '29yyyyyyyy', "sWidth":"55px", align:"center"},
+		   			         	{"sTitle": '30xx', "sName" : '30yyyyyyyyyyyyyyyy', "sWidth":"55px", align:"center"},
+		   			   			{"sTitle": '31xxxxxxx xxxxx', "sName" : '31yyyyyyyy', "sWidth":"75px", align:"center"},
+		   			  			{"sTitle": '32xx', "sName" : '32yyyyyyyy', "sWidth":"55px", align:"center"},
+		   			      		{"sTitle": '33xxx', "sName" : '33yyyyyyyy', "sWidth":"55px", align:"center"}
+		   			   	   	   	]
+		   	    });
+}
+
+
+function getData() {
+    var data= [["Open Image","XXXXXX","XXX","","XXXXXX,XXXXXXX","<a href=\'http://xxx.xxx.xxx/xxxxxx/xxxx.cfm?IDs=xxx&fromApp=xxx\' target=\'_blank\'>xxxxxxxxxxxxxxxx</a>","XXXXXX",10,"1.0","XXXXXXXXXXXXXXXXXX XXXXXXXX XX XXXXXXXXXXXXX XXXXX","$861,873","$1,413,471","$861,873","$1,413,471","10.0%","$775,686","$1,272,124",5,5,"<a target=\'_blank\' href=\'/XXX/XXXXXXX/XXXXXXXXXXXXXXXXXXXXXX.action?XXXXXXXXXXXXX=XXXXXXXXXXXX&XXXXXXXXXXXXXX=XXXXXXXX&showMenu=false\'>XXXXXXXXX</a>",68502,69788,72367,73047,1,"A",999999999,"XXXXXXXXXXXXXXX-YY",41241,"A","A","","A","A"],	    	            ["Open Image","YYYYY","YYY","","YYYYYYYYYYYYYY, YYYY","<a href=\'http://xxx.xxx.xxx/xxxxxx/xxxx.cfm?IDs=xxx&fromApp=xxx\' target=\'_blank\'>yyyyyyyyyyyyyyyy</a>","YYYYYY",10,"1.0","YYYYYY YYY YYYYYYYYYYYYYYYYY","$861,873","$1,413,471","$861,873","$1,413,471","10.0%","$775,686",			"$1,272,124",5,5,"<a target=\'_blank\' href=\'/XXX/XXXXXXX/XXXXXXXXXXXXXXXXXXXXXX.action?XXXXXXXXXXXXX=XXXXXXXXXXXX&XXXXXXXXXXXXXX=XXXXXXXX&showMenu=false\'>XXXXXXXXX</a>",68502,69788,72367,73047,1,"A",88888888,"YYYYYYYYYYYYY-YY",41241,"A","A","","A","A"]];
+    data.push(data[0].slice(0));
+    data.push(data[1].slice(0));
+    data.push(data[0].slice(0));
+    data.push(data[1].slice(0));
+    data.push(data[0].slice(0));
+    data.push(data[1].slice(0));
+    data.push(data[0].slice(0));
+    data.push(data[1].slice(0));
+    data.push(data[0].slice(0));
+    data.push(data[1].slice(0));
+    data.push(data[0].slice(0));
+    data.push(data[1].slice(0));
+    data.push(data[0].slice(0));
+    data.push(data[1].slice(0));
+    return data;
+	    }
+
+$(document).ready(function(){
+    // now load the grid, this could be called many times
+   	loadDefaultGrid();
+});
+
+
+var columnsOn=true;
+function toggleColumns() {
+    columnsOn=!columnsOn;
+    oTable.fnSetColumnVis( 4, columnsOn);
+    oTable.fnSetColumnVis( 5, columnsOn);
+    oTable.fnSetColumnVis( 6, columnsOn);
+    oTable.fnSetColumnVis( 7, columnsOn);
+    oTable.fnSetColumnVis( 8, columnsOn);
+    oTable.fnSetColumnVis( 9, columnsOn);
+}
+
+//]]>
+</script>
+
+<button id="toggleColumnsId" onclick="toggleColumns()" >Toggle Columns</button>
+
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="gridtable">
+<thead>
+</thead>
+<tbody></tbody>
+</table>
+</body>
+</html>
