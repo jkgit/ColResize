@@ -30,10 +30,6 @@ table.display td {
 	visibility:hidden
 }
 
-.dataTables_scroll {
-	width:100%;
-}
-
 /* Style the data cells */
 table.display td {
   border: 0;
