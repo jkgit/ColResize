@@ -34,11 +34,11 @@ function loadDefaultGrid() {
 			"bAutoWidth": false,
 			"aaSorting": [],
     		"oColReorder": {
-            	"fnResizeTableCallback" : function(table, tableWidth, moveLength) {
+            	"fnResizeTableCallback" : function(table, columnTh, moveLength) {
                 	// throttle the events so we don't slow down the drag
             	    window.clearTimeout(throttled);
                 	throttled=setTimeout(function() {
-                		console.log("Table width is now "+tableWidth);
+                		console.log("Column width is now "+columnTh.width()+" and table width is now "+table.width());
                 	}, 1000);
             	}
     		},

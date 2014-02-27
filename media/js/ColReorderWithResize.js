@@ -460,7 +460,7 @@ ColReorder = function( oDTSettings, oOpts )
          * Callback called after each time the table is resized
          * This could be multiple times on one mouse move.
          * useful for resizing a containing element.
-         * Passed the table element, new size, and the size change
+         * Passed the table element, th element, and the size change
          * @property fnResizeTableCallback
          * @type     function
          * @default  function(table, newSize, sizeChange) {}
@@ -995,7 +995,6 @@ ColReorder.prototype = {
 							$(this.s.dt.nTable).width(this.table_size + moveLength);
 		            	}
 		            }
-					this.s.fnResizeTableCallback($(this.s.dt.nTable),$(this.s.dt.nTable).width(),moveLength);
 				}
 				// resize style is table and no scroll x, so just resize the table
 				else if (this.s.resizeStyle=="table") {
@@ -1005,8 +1004,10 @@ ColReorder.prototype = {
 	                }
 				   var newTableWidth = this.table_size + moveLength;
                    $(this.s.dt.nTable).width(newTableWidth);
-                   this.s.fnResizeTableCallback($(this.s.dt.nTable),newTableWidth,moveLength);
 				}
+				
+				// trigger callback handler
+				this.s.fnResizeTableCallback($(this.s.dt.nTable),$(nTh),moveLength);
 			}
 				  
 			return;
