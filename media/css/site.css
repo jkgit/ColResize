@@ -3,6 +3,8 @@
 div.fg-toolbar { 
 	font-size: 0.8em;
 	overflow:auto;
+	background:#ddd;
+	height:100%;
 }
 
 /* Remove padding and margins so there is no extra space to squash as table is resized.
@@ -23,11 +25,6 @@ table.display td {
   overflow: hidden; /* this is what fixes the expansion */
   text-overflow: ellipsis; /* not supported in all browsers, but I accepted the tradeoff */
   white-space: nowrap;
-}
-
-/* set visibility hidden for IE which doesn't honor the height:0px */
-.dataTables_scrollBody table thead { 
-	visibility:hidden
 }
 
 /* Style the data cells */

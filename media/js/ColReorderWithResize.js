@@ -447,7 +447,7 @@ ColReorder = function( oDTSettings, oOpts )
          *  layout - set table-layout to fixed and width to auto, let browser expand the grid.
          *  		 layout should be faster than setting the width of the table ourselves
          *  table - add width to the parent table as column gets larger. should work like layout but
-         *  		 a little slower on older browsers like IE8
+         *  		 a little slower 
          * 
          * @property resizeStyle
          * @type     string
@@ -520,12 +520,22 @@ ColReorder = function( oDTSettings, oOpts )
 	/* Store the instance for later use */
 	ColReorder.aoInstances.push( this );
 
-    // Set table layout fixed for layout and greedy resizeStyle.  The data table doesn't change with greedy style
-	// if layout is not fixed.  The resizeStyle table works ok without it.
-    if (this.s.resizeStyle=="layout" || this.s.resizeStyle=="greedy") {
-        $(this.s.dt.nTable).css('table-layout','fixed');
-        $('.dataTables_scrollHead table').css('table-layout','fixed');
-    }
+	this.isOldIE=$.browser && $.browser.msie && ($.browser.version == "6.0" || $.browser.version == "7.0" || $.browser.version == "8.0")
+	
+	// In IE8 and below in quirks mode, layout doesn't expand the table, so force it to table style
+	if (this.isOldIE && document.documentMode && document.documentMode==5
+			&& this.s.resizeStyle=="layout") {
+		this.s.resizeStyle="table";
+		alert("Your Internet Explorer browser is operating in Quirks mode.  This mode is not supported by the dataTables plugin.");
+		console.log("ColReorderWithResize is using table resize style instead of layout in IE8 and below.");
+	}
+	
+	// Set table layout fixed for layout and greedy resizeStyle.  The data table doesn't change with greedy style
+	// if layout is not fixed.  Also allows cells to contract to cover long text.
+	if (this.s.resizeStyle=="layout" || this.s.resizeStyle=="greedy") {
+		$(this.s.dt.nTable).css('table-layout','fixed');
+		$('.dataTables_scrollHead table').css('table-layout','fixed');
+	}
     
 	return this;
 };
@@ -1257,8 +1267,10 @@ ColReorder.prototype = {
 	 */
 	"_fnDraw": function ()
 	{
-		$(".dataTables_scrollHead table").width("auto");
-		$(".dataTables_scrollBody table").width("auto");
+		if (!this.isOldIE) {
+			$(".dataTables_scrollHead table").width("auto");
+			$(".dataTables_scrollBody table").width("auto");
+		}
 	}
 };
 
