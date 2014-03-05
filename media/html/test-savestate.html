@@ -38,16 +38,8 @@ function loadDefaultGrid() {
 		  	} ,
 			"bJQueryUI": true,
 			"bAutoWidth": false,
+			"bStateSave": true,
 			"aaSorting": [],
-    		"oColReorder": {
-            	"fnResizeTableCallback" : function(table, columnTh, moveLength) {
-                	// throttle the events so we don't slow down the drag
-            	    window.clearTimeout(throttled);
-                	throttled=setTimeout(function() {
-                		console.log("Column width is now "+columnTh.width()+" and table width is now "+table.width());
-                	}, 1000);
-            	}
-    		},
     	    "aaData": jsonData,  
 		   	/* no zebra striping */
 		   	"asStripeClasses":[],

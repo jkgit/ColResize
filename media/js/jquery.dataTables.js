@@ -3670,7 +3670,7 @@
 		// Sanity check that the table is of a sensible width. If not then we are going to get
 		// misalignment - try to prevent this by not allowing the table to shrink below its min width
 		var tableOuterWidth=table.outerWidth();
-		if ( tableOuterWidth <= sanityWidth )
+		if ( tableOuterWidth<=sanityWidth )
 		{
 			// The min width depends upon if we have a vertical scrollbar visible or not */
 			correction = ((divBodyEl.scrollHeight > divBodyEl.offsetHeight ||
@@ -3699,7 +3699,7 @@
 		// then we want to keep the width of the body and header 100% so overflow
 		// will work.  otherwise the container is as wide as the table, which won't
 		// force scrolling
-		if (scrollX==="") {
+		if (scrollX === "") {
 			divBodyStyle.width = _fnStringToCss( correction );
 			divHeaderStyle.width = _fnStringToCss( correction );
 		}
@@ -7230,7 +7230,7 @@
 				res = select( typeof a[j] === 'string' ? $.trim(a[j]) : a[j] );
 	
 				if ( res && res.length ) {
-					out.push.apply( out, res );
+					 out.push.apply( out, res );
 				}
 			}
 		}
@@ -8035,14 +8035,17 @@
 			}
 	
 			// jQuery filtered cells
-			return allCells.filter( s ).map( function (i, el) {
-				row = el.parentNode._DT_RowIndex;
+			return allCells
+				.filter( s )
+				.map( function (i, el) {
+					row = el.parentNode._DT_RowIndex;
 	
-				return {
-					row: row,
-					column: $.inArray( el, data[ row ].anCells )
-				};
-			} );
+					return {
+						row: row,
+						column: $.inArray( el, data[ row ].anCells )
+					};
+				} )
+				.toArray();
 		} );
 	};
 	

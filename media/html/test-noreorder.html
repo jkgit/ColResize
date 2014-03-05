@@ -39,15 +39,6 @@ function loadDefaultGrid() {
 			"bJQueryUI": true,
 			"bAutoWidth": false,
 			"aaSorting": [],
-    		"oColReorder": {
-            	"fnResizeTableCallback" : function(table, columnTh, moveLength) {
-                	// throttle the events so we don't slow down the drag
-            	    window.clearTimeout(throttled);
-                	throttled=setTimeout(function() {
-                		console.log("Column width is now "+columnTh.width()+" and table width is now "+table.width());
-                	}, 1000);
-            	}
-    		},
     	    "aaData": jsonData,  
 		   	/* no zebra striping */
 		   	"asStripeClasses":[],
@@ -57,7 +48,7 @@ function loadDefaultGrid() {
 		   	             [25, 50, 100, 200, "All"]
 		   	         ], 
 		   	"iDisplayLength" : -1,
-		   	"sDom": 'T<"clear"><"H"RZlfrC>tS<"F"iN>',
+		   	"sDom": 'T<"clear"><"H"ZlfrC>tS<"F"iN>',
 		   	"sPaginationType": "full_numbers",
 		   	// set classes on row depending on data
 		   	"fnRowCallback": function( nRow, aData, iDisplayIndex ) {
