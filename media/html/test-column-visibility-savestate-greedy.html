@@ -37,10 +37,12 @@ function loadDefaultGrid() {
 		          "sProcessing": "loading data..."
 		  	} ,
 			"bJQueryUI": true,
+			"bStateSave": true,
 			"bAutoWidth": false,
 			"aaSorting": [],
+			"sScrollX" : "100%",
     		"oColResize": {
-        		"minResizeWidth" : "initial"
+        		"resizeStyle" : "greedy"
     		},
     	    "aaData": jsonData,  
 		   	/* no zebra striping */
@@ -51,7 +53,7 @@ function loadDefaultGrid() {
 		   	             [25, 50, 100, 200, "All"]
 		   	         ], 
 		   	"iDisplayLength" : -1,
-		   	"sDom": 'T<"clear"><"H"ZRlfrC>tS<"F"iN>',
+		   	"sDom": 'T<"clear"><"H"RZlfrC>tS<"F"iN>',
 		   	"sPaginationType": "full_numbers",
 		   	// set classes on row depending on data
 		   	"fnRowCallback": function( nRow, aData, iDisplayIndex ) {
@@ -123,8 +125,21 @@ $(document).ready(function(){
 });
 
 
+var columnsOn=true;
+function toggleColumns() {
+    columnsOn=!columnsOn;
+    oTable.fnSetColumnVis( 4, columnsOn);
+    oTable.fnSetColumnVis( 5, columnsOn);
+    oTable.fnSetColumnVis( 6, columnsOn);
+    oTable.fnSetColumnVis( 7, columnsOn);
+    oTable.fnSetColumnVis( 8, columnsOn);
+    oTable.fnSetColumnVis( 9, columnsOn);
+}
+
 //]]>
 </script>
+
+<button id="toggleColumnsId" onclick="toggleColumns()" >Toggle Columns</button>
 
 <table cellpadding="0" cellspacing="0" border="0" class="display" id="gridtable">
 <thead>

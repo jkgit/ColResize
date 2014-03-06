@@ -4,7 +4,7 @@
 <head>
 	<title>Test of ColReorderWithResize</title>
 	<meta http-equiv="X-UA-Compatible" content="IE=8" >
-	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />		
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
 	<script type="text/javascript" src="../js/jquery-1.11.0.js?appVer=${appVersion}"></script>
 	<script type="text/javascript" src="../js/jquery-ui-1.10.3.custom.js?appVer=${appVersion}"></script>
 	<script type="text/javascript" src="../js/jquery.dataTables.js"></script>
@@ -37,21 +37,24 @@ function loadDefaultGrid() {
 		          "sProcessing": "loading data..."
 		  	} ,
 			"bJQueryUI": true,
+			"bStateSave": true,
 			"bAutoWidth": false,
 			"aaSorting": [],
+			"sScrollY": "150",
+           	"sScrollX": "100%",
     		"oColResize": {
-        		"minResizeWidth" : "initial"
+        		"minResizeWidth" : "10",
+        		"resizeStyle" : "layout"
     		},
     	    "aaData": jsonData,  
 		   	/* no zebra striping */
 		   	"asStripeClasses":[],
-	        "bDeferRender": true,
 		   	"aLengthMenu": [
 		   	             [25, 50, 100, 200, -1],
 		   	             [25, 50, 100, 200, "All"]
 		   	         ], 
 		   	"iDisplayLength" : -1,
-		   	"sDom": 'T<"clear"><"H"ZRlfrC>tS<"F"iN>',
+		   	"sDom": 'T<"clear"><"H"ZRlfrC>t<"F"iN>',
 		   	"sPaginationType": "full_numbers",
 		   	// set classes on row depending on data
 		   	"fnRowCallback": function( nRow, aData, iDisplayIndex ) {

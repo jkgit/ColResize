@@ -23,7 +23,61 @@
 
 (function(window, document, undefined) {
 
+	
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * DataTables plug-in API functions
+ *
+ * This are required by ColResize in order to perform the tasks required, and also keep this
+ * code portable, to be used for other column resizing projects with DataTables, if needed.
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
+
+/**
+ * Plug-in for DataTables which will resize the internal column structure.
+ * 
+ *  @method  $.fn.dataTableExt.oApi.fnColResize
+ *  @param   object oSettings DataTables settings object - automatically added by DataTables!
+ *  @param   int iCol Take the column to be repositioned from this point
+ *  @param   int newSize and change its size to newSize
+ *  @returns void
+ */
+$.fn.dataTableExt.oApi.fnColResize = function ( oSettings, iCol, iSize )
+{
+	var v110 = $.fn.dataTable.Api ? true : false;
+	var i, iLen, j, jLen, iCols=oSettings.aoColumns.length, nTrs, oCol;
+
+	var originalWidth = oSettings.aoColumns[iCol].sWidth;
+	
+	/* Sanity check in the input */
+	if ( iSize == originalWidth )
+	{
+		/* Pointless resize */
+		return;
+	}
+
+	if ( iCol < 0 || iCol >= iCols )
+	{
+		this.oApi._fnLog( oSettings, 1, "ColResize 'column' index is out of bounds: "+iCol );
+		return;
+	}
+	
+	/* Size the internal column setting first */
+	var aoColumn=oSettings.aoColumns[iCol];
+	aoColumn.sWidth=iSize;
+	
+	/*
+	 * Size the DOM sizing elements regardless of whether they are visible or not.
+	 */
+	var nTh = aoColumn.nTh;
+	$(nTh).width(iSize);
+
+	/* Fire an event so other plug-ins can update */
+	$(oSettings.oInstance).trigger( 'column-resize', [ oSettings, {
+		"iCol": iCol,
+		"iSize": iSize
+	} ] );
+};
 
 
 var factory = function( $, DataTable ) {
@@ -197,7 +251,7 @@ var ColResize = function( dt, opts )
 	this.scrollBodyTableHeadRow=null;
 
 	/* Add draw callback */
-	oDTSettings.oApi._fnCallbackReg(oDTSettings, 'aoDrawCallback', jQuery.proxy(this._fnDraw, this), 'ColReorder');
+	oDTSettings.oApi._fnCallbackReg(oDTSettings, 'aoDrawCallback', jQuery.proxy(this._fnDraw, this), 'ColResize');
 
 	this.isOldIE=$.browser && $.browser.msie && ($.browser.version == "6.0" || $.browser.version == "7.0" || $.browser.version == "8.0")
 	
@@ -208,7 +262,7 @@ var ColResize = function( dt, opts )
 			&& this.s.resizeStyle=="layout") {
 		this.s.resizeStyle="table";
 		alert("Your Internet Explorer browser is operating in Quirks mode.  This mode is not supported by the dataTables plugin.");
-		console.log("ColReorderWithResize is using table resize style instead of layout in IE8 and below.");
+		console.log("ColResize is using table resize style instead of layout in IE8 and below.");
 	}
 	
 	// Set table layout fixed for layout and greedy resizeStyle.  The data table doesn't change with greedy style
@@ -287,13 +341,13 @@ ColResize.prototype = {
             this.s.fnResizeTableCallback = this.s.init.fnResizeTableCallback;
         }
 
-		/* Add event handlers for the drag and drop, and also mark the original column order */
-		for ( i = 0; i < iLen; i++ )
-		{
-			this._fnMouseListener( i, this.s.dt.aoColumns[i].nTh );
+		/* Add event handlers for the resize */
+        this._fnAddMouseListeners();
 
-			/* Mark the original column order for later reference */
-			this.s.dt.aoColumns[i]._ColReorder_iOrigCol = i;
+        if ( this.s.dt.oLoadedState && typeof this.s.dt.oLoadedState.ColResize != 'undefined' &&
+      		 this.s.dt.oLoadedState.ColResize.columnWidths.length == this.s.dt.aoColumns.length ) {
+      		this._fnSizeTables(this.s.dt.oLoadedState.ColResize.tableSize);
+			this._fnSizeColumns(this.s.dt.oLoadedState.ColResize.columnWidths);
 		}
 
 		/* State saving */
@@ -301,10 +355,51 @@ ColResize.prototype = {
 			that._fnStateSave.call( that, oData );
 		}, "ColResize_State" );
 
-		/* TODO - Implement load of sizes */
+		/* Listen for column reordering events */
+		$(this.s.dt.oInstance).on( 'column-reorder', null, function (oS, oData) {
+			/* Re-apply mouse listeners using new column order */
+	        that._fnAddMouseListeners();
+		});
+	},
+	
+	/**
+	 * Add mouse listeners to each column
+	 *  @method  _fnAddMouseListeners
+	 *  @returns void
+	 *  @private
+	 */
+	"_fnAddMouseListeners": function () {
+		var iLen = this.s.dt.aoColumns.length;
+		
+		/* Add event handlers for the drag and drop, and also mark the original column order */
+		for ( var i = 0; i < iLen; i++ )
+		{
+			this._fnMouseListener( i, this.s.dt.aoColumns[i].nTh );
+		}
 	},
 
 
+	/**
+	 * Set the size of the tables to fit in the resized columns
+	 *  @method  _fnSizeColumns
+	 *  @param   int iWidth An integer which dictates the width of the table
+	 *  @returns void
+	 *  @private
+	 */
+	"_fnSizeTables": function ( iWidth )
+	{
+		if (iWidth==null) {
+			this.s.dt.oInstance.oApi._fnLog( this.s.dt, 1, "ColResize - table resize is null. Skipping." );
+			return;
+		}
+		
+		// resize the data table
+		$(this.s.dt.nTable).width(iWidth);
+		
+		// resize the header table if scroll is enabled
+		$(".dataTables_scrollHead table").width(iWidth);
+	},
+	
 	/**
 	 * Set the column order from an array
 	 *  @method  _fnOrderColumns
@@ -316,19 +411,32 @@ ColResize.prototype = {
 	{
 		if ( a.length != this.s.dt.aoColumns.length )
 		{
-			this.s.dt.oInstance.oApi._fnLog( this.s.dt, 1, "ColResize - array reorder does not "+
+			this.s.dt.oInstance.oApi._fnLog( this.s.dt, 1, "ColResize - array columnWidths does not "+
 				"match known number of columns. Skipping." );
 			return;
 		}
 		
-		/* TODO - Implement */
+		for ( var i=0, iLen=a.length ; i<iLen ; i++ )
+		{
+			var aoColumn = this.s.dt.aoColumns[i];
+			var currSize = aoColumn.sWidth;
+			if ( a[i] != currSize )
+			{
+				/* Do the column resize in the table */
+				this.s.dt.oInstance.fnColResize( i, a[i] );
+			}
+		}
+
+		/* Save the state */
+		this.s.dt.oInstance.oApi._fnSaveState( this.s.dt );
 	},
 
 
 	/**
-	 * Because we change the indexes of columns in the table, relative to their starting point
-	 * we need to reorder the state columns to what they are at the starting point so we can
-	 * then rearrange them again on state load!
+	 * Store the new column sizes.  Important to note that the sizes in the array will be in the current order of the table. 
+	 * Which means if ColReorder has changed the order, the array will be in the changed order, not the original order from
+	 * datatables config.
+	 * 
 	 *  @method  _fnStateSave
 	 *  @param   object oState DataTables state
 	 *  @returns string JSON encoded cookie string for DataTables
@@ -339,7 +447,24 @@ ColResize.prototype = {
 		var i, iLen, aCopy, iOrigColumn;
 		var oSettings = this.s.dt;
 
-		/* TODO - Implement */
+		// could save table size as well, would make it easier to restore when resize style is table
+		oState.ColResize = {};
+		oState.ColResize.tableSize=$(oSettings.nTable).width();
+		oState.ColResize.columnWidths = [];
+		
+		for ( i=0, iLen=oSettings.aoColumns.length ; i<iLen ; i++ )
+		{
+			/* Store the width of the th, not the swidth stored in aoColumns.  The actual width may have been adjusted by the
+			 * browser unknown to the settings (should the resizer account for this and update sWidth of all columns after 
+			 * resizing one column?) 
+			 * 
+			 * If ColReorder has stored origin columns, use the original column position for the array.  This will load correctly if
+			 * ColReorder has not done its thing already.  This may not be dependable though in the case that ColReorder goes first.
+			 * */
+			var aoColumn = oSettings.aoColumns[i];
+			var correctedI = aoColumn._ColReorder_iOrigCol || i;
+			oState.ColResize.columnWidths[correctedI]=$(aoColumn.nTh).width();
+		}
 	},
 
 
@@ -381,13 +506,13 @@ ColResize.prototype = {
 		                $(nThTarget).css({'cursor': 'pointer'});     
 		        }
 	  		});
-		}
 
-		$(nTh).on( 'mousedown.ColResize', function (e) {
-			e.preventDefault();
-			that._fnMouseDown.call( that, e, nTh, i ); //Martin Marchetta: added the index of the column dragged or resized
-			return false;
-		} );
+			$(nTh).on( 'mousedown.ColResize', function (e) {
+				e.preventDefault();
+				that._fnMouseDown.call( that, e, nTh, i ); //Martin Marchetta: added the index of the column dragged or resized
+				return false;
+			} );
+		}
 	},
 
 
@@ -534,7 +659,7 @@ ColResize.prototype = {
 		            	
 		            	// resize the table in the scroll header
 						if (this.scrollHeadTableHeadRow!=null) {
-							$headerTable = $(this.scrollHeadTableHeadRow.parentNode.parentNode);
+							var $headerTable = $(this.scrollHeadTableHeadRow.parentNode.parentNode);
 			            	//Keep the current table's width so that we can increase the original table width by the mouse move length
 			                if (this.table_size < 0) {
 			                    this.table_size = $headerTable.width();
@@ -673,7 +798,7 @@ ColResize.prototype = {
 	 */
 	"_fnDraw": function ()
 	{
-		if (!this.isOldIE) {
+		if (!(this.isOldIE || this.s.resizeStyle=="table")) {
 			$(".dataTables_scrollHead table").width("auto");
 			$(".dataTables_scrollBody table").width("auto");
 		}

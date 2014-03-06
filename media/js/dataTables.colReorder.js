@@ -195,7 +195,6 @@ $.fn.dataTableExt.oApi.fnColReorder = function ( oSettings, iFrom, iTo )
 		}
 	}
 
-
 	/*
 	 * Move the DOM elements
 	 */
@@ -220,6 +219,18 @@ $.fn.dataTableExt.oApi.fnColReorder = function ( oSettings, iFrom, iTo )
 		for ( i=0, iLen=nTrs.length ; i<iLen ; i++ )
 		{
 			fnDomSwitch( nTrs[i], iVisibleIndex, iInsertBeforeIndex );
+		}
+		
+		 /* Hidden Header
+         *   Determine if scroll body is enabled, if so, also switch the columns in the hidden positioning row
+         */
+		if (oSettings.nScrollBody) {
+			var scrollBodyHeader = $('thead', $(oSettings.nScrollBody));
+			nTrs = scrollBodyHeader[0].getElementsByTagName('tr');
+			for ( i=0, iLen=nTrs.length ; i<iLen ; i++ )
+			{
+				fnDomSwitch( nTrs[i], iVisibleIndex, iInsertBeforeIndex );
+			}
 		}
 
 		/* Footer */
@@ -254,15 +265,16 @@ $.fn.dataTableExt.oApi.fnColReorder = function ( oSettings, iFrom, iTo )
 	/* Array array - internal data anodes cache */
 	for ( i=0, iLen=oSettings.aoData.length ; i<iLen ; i++ )
 	{
+		// v110 _fnGetCellData uses _aData, so switch columns in _aData as well
+		if ( $.isArray( oSettings.aoData[i]._aData ) ) {
+			fnArraySwitch( oSettings.aoData[i]._aData, iFrom, iTo );
+		}
+			
 		if ( v110 ) {
 			// DataTables 1.10+
 			fnArraySwitch( oSettings.aoData[i].anCells, iFrom, iTo );
 		}
 		else {
-			// DataTables 1.9-
-			if ( $.isArray( oSettings.aoData[i]._aData ) ) {
-				fnArraySwitch( oSettings.aoData[i]._aData, iFrom, iTo );
-			}
 			fnArraySwitch( oSettings.aoData[i]._anHidden, iFrom, iTo );
 		}
 	}
@@ -281,12 +293,17 @@ $.fn.dataTableExt.oApi.fnColReorder = function ( oSettings, iFrom, iTo )
 		}
 	}
 
-	// In 1.10 we need to invalidate row cached data for sorting, filtering etc
+
+
+	/* 
+	 * In 1.10 we need to invalidate row cached data for sorting, filtering etc.  Do this before moving DOM elements since
+	 * it causes a redraw.  If done after the move is nullified because everything moves back to where it started.
+	 */
 	if ( v110 ) {
 		var api = new $.fn.dataTable.Api( oSettings );
 		api.rows().invalidate();
 	}
-
+	
 	/*
 	 * Update DataTables' event handlers
 	 */

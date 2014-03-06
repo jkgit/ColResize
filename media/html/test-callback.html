@@ -39,7 +39,7 @@ function loadDefaultGrid() {
 			"bJQueryUI": true,
 			"bAutoWidth": false,
 			"aaSorting": [],
-    		"oColReorder": {
+    		"oColResize": {
             	"fnResizeTableCallback" : function(table, columnTh, moveLength) {
                 	// throttle the events so we don't slow down the drag
             	    window.clearTimeout(throttled);
