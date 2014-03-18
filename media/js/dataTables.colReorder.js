@@ -481,6 +481,21 @@ var ColReorder = function( dt, opts )
 	/* Add destroy callback */
 	oDTSettings.oApi._fnCallbackReg(oDTSettings, 'aoDestroyCallback', $.proxy(this._fnDestroy, this), 'ColReorder');
 
+	/* Add data callback.  This function reorders the json data to the new order determined by colreorder.  This is necessary
+	   for ajax load where the constructor for colReorder can't adjust the data.  It has to be adjusted after colreorder has
+	   initialized itself and reordered the column headings.  Could be done after a draw, but this gets to the source faster. */
+	oDTSettings.oApi._fnCallbackReg(oDTSettings, 'aoDataCallback', function(aDataIn) {
+		/* Manipulate aDataIn to match current column ordering */
+		var columns = this.fnSettings().aoColumns;
+		var orderedDataIn = [columns.length];
+		for ( var i=0, iLen=columns.length ; i<iLen ; i++ )
+		{
+			orderedDataIn[i]=aDataIn[columns[i]._ColReorder_iOrigCol];
+		}
+		
+		return orderedDataIn;
+	});
+	
 	return this;
 };
 

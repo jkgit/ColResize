@@ -908,7 +908,13 @@
 			src: nTr ? 'dom' : 'data'
 		} );
 	
+		/* Data callback functions - might want to manipulate the data.  can be only one */
+		if (oSettings.aoDataCallback.length > 0) {
+			aDataIn = _fnCallbackFire( oSettings, 'aoDataCallback', null, [aDataIn] );
+		}
+		
 		oData._aData = aDataIn;
+		
 		oSettings.aoData.push( oData );
 	
 		/* Create the cells */
@@ -5913,6 +5919,7 @@
 			_fnCallbackReg( oSettings, 'aoStateLoadParams',    oInit.fnStateLoadParams,   'user' );
 			_fnCallbackReg( oSettings, 'aoStateLoaded',        oInit.fnStateLoaded,       'user' );
 			_fnCallbackReg( oSettings, 'aoRowCallback',        oInit.fnRowCallback,       'user' );
+			_fnCallbackReg( oSettings, 'aoDataCallback',       oInit.fnDataCallback,      'user' );
 			_fnCallbackReg( oSettings, 'aoRowCreatedCallback', oInit.fnCreatedRow,        'user' );
 			_fnCallbackReg( oSettings, 'aoHeaderCallback',     oInit.fnHeaderCallback,    'user' );
 			_fnCallbackReg( oSettings, 'aoFooterCallback',     oInit.fnFooterCallback,    'user' );
@@ -10040,6 +10047,28 @@
 		 *    } );
 		 */
 		"fnRowCallback": null,
+		
+		/**
+		 * This function allows you to 'post process' each row of data before it is turned
+		 * into data and dom objects. This function might be used for reordering data, squashing data, etc.  Most
+		 * useful with an ajax load where the data is loaded after plugins are constructed/initialized so the
+		 * data has not been manipulated yet.
+		 *  @type function
+		 *  @param {array} data Raw data array for this row
+		 *
+		 *  @dtopt Callbacks
+		 *  @name DataTable.defaults.dataCallback
+		 *
+		 *  @example
+		 *    $(document).ready( function() {
+		 *      $('#example').dataTable( {
+		 *        "dataCallback": function( row ) {
+		 *          return row.reverse();
+		 *        }
+		 *      } );
+		 *    } );
+		 */
+		"fnDataCallback": null,
 	
 	
 		/**
@@ -12400,6 +12429,13 @@
 		 *  @default []
 		 */
 		"aoRowCallback": [],
+	
+		/**
+		 * Callback functions array for every time a row of data is loaded.
+		 *  @type array
+		 *  @default []
+		 */
+		"aoDataCallback": [],
 	
 		/**
 		 * Callback functions for the header on each draw.

@@ -462,7 +462,7 @@ ColResize.prototype = {
 			 * ColReorder has not done its thing already.  This may not be dependable though in the case that ColReorder goes first.
 			 * */
 			var aoColumn = oSettings.aoColumns[i];
-			var correctedI = aoColumn._ColReorder_iOrigCol || i;
+			var correctedI = ("_ColReorder_iOrigCol" in aoColumn)?aoColumn._ColReorder_iOrigCol:i;
 			oState.ColResize.columnWidths[correctedI]=$(aoColumn.nTh).width();
 		}
 	},
