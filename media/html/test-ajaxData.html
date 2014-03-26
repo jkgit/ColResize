@@ -1,0 +1,133 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+	<title>Test of Ajax Data load</title>
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge" >
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />		
+	<script type="text/javascript" src="../js/jquery-1.11.0.js?appVer=${appVersion}"></script>
+	<script type="text/javascript" src="../js/jquery-ui-1.10.4.custom.js?appVer=${appVersion}"></script>
+	<script type="text/javascript" src="../js/jquery.dataTables.js"></script>
+	<script type="text/javascript" src="../js/dataTables.colReorder.js"></script>
+	<script type="text/javascript" src="../js/dataTables.colResize.js"></script>
+	<script type="text/javascript" src="../js/jquery.browser.js"></script>
+	<link rel="stylesheet" type="text/css" href="../css/jquery.dataTables-1.10.0-beta.2.css"/>
+	<link rel="stylesheet" type="text/css" href="../css/jquery.dataTables_themeroller-1.10.0-beta.2.css"/>
+	<link rel="stylesheet" type="text/css" href="../css/jquery-ui-1.10.4.custom.css"/>
+	<link rel="stylesheet" type="text/css" href="../css/dataTables.colReorder.css"/>
+	<link rel="stylesheet" type="text/css" href="../css/dataTables.colVis.css"/>
+	<link rel="stylesheet" type="text/css" href="../css/site.css"/>
+</head>
+
+<body>
+<a href="test.html">Return to Main Test Page</a><br/>
+* This test does not work in Chrome because Access-Control-Allow-Origin header is not present.<br/>
+
+<script type="text/javascript">
+//<![CDATA[
+
+var urlLoad="${pageContext.request.contextPath}/grid/ajaxReviewDatatables4.action?payPlanCode=${payPlanCode}&expedited=${expedited}&searchType=${searchType}&searchTerm=${searchTerm}";
+
+var oTable;
+var throttled;
+
+function loadDefaultGrid() {
+		oTable = $('#gridtable').dataTable( {
+		   	"bProcessing": true,
+		   	"oLanguage": {
+		          "sProcessing": "loading data..."
+		  	} ,
+			"bJQueryUI": true,
+			"bStateSave": true,
+			"bAutoWidth": false,
+			"aaSorting": [],
+	     "sScrollY": "150",
+            "sScrollX": "100%",
+    		"oColResize": {
+        		"minResizeWidth" : "10",
+        		"resizeStyle" : "layout"
+    		},
+    	   /* "aaData": jsonData,  */
+"sAjaxSource": "ajaxData.txt",
+		   	/* no zebra striping */
+		   	"asStripeClasses":[],
+	        "bDeferRender": true,
+		   	"aLengthMenu": [
+		   	             [25, 50, 100, 200, -1],
+		   	             [25, 50, 100, 200, "All"]
+		   	         ], 
+		   	"iDisplayLength" : -1,
+		   	"sDom": 'T<"clear"><"H"RZlfrC>t<"F"iN>',
+		   	"sPaginationType": "full_numbers",
+		   	// set classes on row depending on data
+		   	"fnRowCallback": function( nRow, aData, iDisplayIndex ) {
+		   	},
+		    "fnInitComplete": function(oSettings, json) {		 					 		
+		   	}, "aoColumns": [
+					{"sTitle": '1XX', "sWidth":"65px", "sClass":"column-align-left", resizable:true},
+					{"sTitle": '2XXX', "sWidth":"45px", "sClass":"column-align-center", resizable:true},
+					{"sTitle": '3XX', "sWidth":"40px", "sClass":"column-align-center", resizable:true},
+					{"sTitle": '4X YYYY', "sWidth":"125px", "sClass":"column-align-left", fixed:true, resizable:true},
+					{"sTitle": '5XXX YYYYY ZZZ', "sWidth":"145px", "sClass":"column-align-left", resizable:true},
+					{"sTitle": '6XXXXXX', "sWidth":"60px", "sClass":"column-align-left", resizable:true},
+					{"sTitle": '7XX', "sWidth":"60px", "sClass":"column-align-center", resizable:true},
+					{"sTitle": '8XX%', "sWidth":"55px", "sClass":"column-align-left", resizable:true},
+					{"sTitle": '9XXXXXX YYYYY', "sWidth":"200px", "sClass":"column-align-left", resizable:true},
+					{"sTitle": '10XX YY', "sWidth":"55px", "sClass":"column-align-center", resizable:true},
+					{"sTitle": '11XX YY', "sWidth":"55px", "sClass":"column-align-center", resizable:true},
+					{"sTitle": '12XX YY', "sWidth":"55px", "sClass":"column-align-center", resizable:true},
+					{"sTitle": '13XX YY', "sWidth":"55px", "sClass":"column-align-center", resizable:true},
+					{"sTitle": '14XX %', "sClass" : "editable column-align-center", "sWidth":"50px", resizable:true},
+					{"sTitle": '15XXX YY', "sWidth":"55px", "sClass":"column-align-center", resizable:true},
+					{"sTitle": '16XXX YY', "sWidth":"55px", "sClass":"column-align-center", resizable:true},
+					{"sTitle": '17XX YYY ZZZZ', "sWidth":"50px", "sClass":"column-align-center", resizable:true},
+	    			{"sTitle": '18XXX YYYY', "sClass" : "editable column-align-center", "sWidth":"50px", resizable:true},
+	       			{"sTitle": '19XXXXXXX', "sWidth":"80px", "sClass":"column-align-left"},
+	           		{"sTitle": '20X YYYYYY ZZ', "sWidth":"125px", "bVisible":false},
+	             	{"sTitle": '21X YYYYYY ZZ', "sWidth":"125px", "bVisible":false},
+	       			{"sTitle": '22X YYYYYY ZZ', "sWidth":"125px", "bVisible":false},
+	          		{"sTitle": '23XX YYYYYY ZZ', "sWidth":"125px", "bVisible":false},
+	          		{"sTitle": '24XX YYYYYYYY', "sWidth":"45px", "sClass":"column-align-center", "bVisible":false},
+	            	{"sTitle": '25XXXXX YYYYY ZZZZ', "sWidth":"70px", "bVisible":false},
+	            	{"sTitle": '26XXXXXXXXXXX YY', "sWidth":"125px", "bVisible":false},
+	            	{"sTitle": '27XXXX YYYYYY', "sWidth":"125px", "bVisible":false},
+	            	{"sTitle": '28XXXXX YY', "sWidth":"125px", "bVisible":false},
+		       		{"sTitle": '1X YYYYYYY', "sWidth":"70px", "sClass":"column-align-center", "bVisible":false},
+		       		{"sTitle": '1X', "sClass":"editable column-align-center poFundingDecision", "sWidth":"55px"},
+		         	{"sTitle": '1X', "sClass":"editable column-align-center ddFundingDecision", "sWidth":"55px"},
+		   			{"sTitle": '1XXXXXXX YYYY', "sClass":"editable column-align-center specialClassCode", "sWidth":"75px"},
+		  			{"sTitle": '1X', "sClass":"editable column-align-center odFundingDecision", "sWidth":"55px"},
+		      		{"sTitle": '1XX', "sClass":"editable column-align-center gmoFundingDecision", "sWidth":"55px"}
+			   	   	   	]
+		   	    });
+}
+
+$(document).ready(function(){
+    // now load the grid, this could be called many times
+   	loadDefaultGrid();
+});
+
+
+var columnsOn=true;
+function toggleColumns() {
+    columnsOn=!columnsOn;
+    oTable.fnSetColumnVis( 4, columnsOn);
+    oTable.fnSetColumnVis( 5, columnsOn);
+    oTable.fnSetColumnVis( 6, columnsOn);
+    oTable.fnSetColumnVis( 7, columnsOn);
+    oTable.fnSetColumnVis( 8, columnsOn);
+    oTable.fnSetColumnVis( 9, columnsOn);
+}
+
+//]]>
+</script>
+
+<button id="toggleColumnsId" onclick="toggleColumns()" >Toggle Columns</button>
+
+<table cellpadding="0" cellspacing="0" border="0" class="display" id="gridtable">
+<thead>
+</thead>
+<tbody></tbody>
+</table>
+</body>
+</html>
