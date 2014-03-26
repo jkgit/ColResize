@@ -253,7 +253,8 @@ var ColResize = function( dt, opts )
 	/* Add draw callback */
 	oDTSettings.oApi._fnCallbackReg(oDTSettings, 'aoDrawCallback', jQuery.proxy(this._fnDraw, this), 'ColResize');
 
-	this.isOldIE=$.browser && $.browser.msie && ($.browser.version == "6.0" || $.browser.version == "7.0" || $.browser.version == "8.0")
+	this.isIE=$.browser && $.browser.msie;
+	this.isOldIE=this.isIE && ($.browser.version == "6.0" || $.browser.version == "7.0" || $.browser.version == "8.0")
 	
 	/* Force some styles where appropriate */
 	
@@ -798,7 +799,7 @@ ColResize.prototype = {
 	 */
 	"_fnDraw": function ()
 	{
-		if (!(this.isOldIE || this.s.resizeStyle=="table")) {
+		if (!(this.isIE || this.s.resizeStyle=="table")) {
 			$(".dataTables_scrollHead table").width("auto");
 			$(".dataTables_scrollBody table").width("auto");
 		}
