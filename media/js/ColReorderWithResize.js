@@ -961,7 +961,8 @@ ColReorder.prototype = {
 					}
 		
 					// find the table head row of the scroll body.  prefer the one set by a modified datatables.
-					var scrollBodyTableHeadRow=this.s.dt.nHiddenHeaderRow[0];
+					// --> set to null, due to nHiddenHeaderRow isn't available in datatables v1.10.0 stable
+					var scrollBodyTableHeadRow=null
 					// if datatables did not supply it, then find it ourselves from the scrollBody.  not caching it
 					// since sorting a table will create a new hidden header
 					if (scrollBodyTableHeadRow==null) {
