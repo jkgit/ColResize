@@ -16,7 +16,7 @@
  * Modified:    February 2012 by Christophe Battarel - christophe.battarel@altairis.fr (ColReorder v1.0.5 adaptation)
  * Modified:    September 16th 2012 by Hassan Kamara - h@phrmc.com
  * Modified:    February 26th 2014 by Jay kraly -jaykraly@gmail.com
- * Modified:    July 28th 2014 by Johann Zelger - j.zelger@techdivision.com (ColReorder v1.1.2 compatibility)
+ * Modified:    July 28th 2014 by Johann Zelger - j.zelger@techdivision.com (DataTables 1.10.x & ColReorder v1.1.2 compatibility)
  * Language:    Javascript
  * License:     GPL v2 or BSD 3 point style
  * Project:     DataTables
