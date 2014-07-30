@@ -1376,9 +1376,11 @@
          */
         "_fnDraw": function ()
         {
-            if (!this.isOldIE) {
-                $(".dataTables_scrollHead table").width("auto");
-                $(".dataTables_scrollBody table").width("auto");
+            if (this.s.dt.oFeatures.bAutoWidth === true) {
+                if (!this.isOldIE) {
+                    $(".dataTables_scrollHead table").width("auto");
+                    $(".dataTables_scrollBody table").width("auto");
+                }
             }
         }
     };
