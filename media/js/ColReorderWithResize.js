@@ -17,6 +17,7 @@
  * Modified:    September 16th 2012 by Hassan Kamara - h@phrmc.com
  * Modified:    February 26th 2014 by Jay kraly -jaykraly@gmail.com
  * Modified:    July 28th 2014 by Johann Zelger - j.zelger@techdivision.com (DataTables 1.10.x & ColReorder v1.1.2 compatibility)
+ * Modified:    September 01th 2014 by Johann Zelger - j.zelger@techdivision.com (Fixed state saving and fixed some bugs)
  * Language:    Javascript
  * License:     GPL v2 or BSD 3 point style
  * Project:     DataTables
@@ -432,6 +433,15 @@
             "dropCallback": null,
 
             /**
+             * Callback function for once the resizing has been done
+             *
+             * @property resizeCallback
+             * @type {Function}
+             * @default null
+             */
+            "resizeCallback": null,
+
+            /**
              * @namespace Information used for the mouse drag
              */
             "mouse": {
@@ -558,6 +568,7 @@
         if (this.s.resizeStyle=="layout" || this.s.resizeStyle=="greedy") {
             $(this.s.dt.nTable).css('table-layout','fixed');
             $('.dataTables_scrollHead table').css('table-layout','fixed');
+            $('.dataTables_scrollBody table').css('table-layout','fixed');
         }
 
         return this;
@@ -632,6 +643,12 @@
                 this.s.init.iFixedColumnsRight :
                 0;
 
+            /* Resize callback initialisation option */
+            if ( this.s.init.fnResizeCallback )
+            {
+                this.s.resizeCallback = this.s.init.fnResizeCallback;
+            }
+
             /* Drop callback initialisation option */
             if ( this.s.init.fnReorderCallback )
             {
@@ -699,8 +716,18 @@
             else {
                 this._fnSetColumnIndexes();
             }
-        },
 
+            // State loading for columns width and user's visibility
+            if (this.s.dt.oLoadedState) {
+                for ( i=0, iLen = this.s.dt.oLoadedState.columns.length ; i < iLen ; i++ ) {
+                    var col = this.s.dt.oLoadedState.columns[i];
+                    // restore width on columns
+                    this.s.dt.aoColumns[i].sWidth = col.width;
+                    this.s.dt.aoColumns[i].width = col.width;
+                }
+            }
+
+        },
 
         /**
          * Set the column order from an array
@@ -743,15 +770,15 @@
             this._fnSetColumnIndexes();
         },
 
-
         /**
          * Because we change the indexes of columns in the table, relative to their starting point
          * we need to reorder the state columns to what they are at the starting point so we can
          * then rearrange them again on state load!
-         *  @method  _fnStateSave
-         *  @param   object oState DataTables state
-         *  @returns string JSON encoded cookie string for DataTables
-         *  @private
+         *
+         * @method  _fnStateSave
+         * @param   object oState DataTables state
+         * @returns string JSON encoded cookie string for DataTables
+         * @private
          */
         "_fnStateSave": function ( oState )
         {
@@ -760,6 +787,12 @@
             var columns = oSettings.aoColumns;
 
             oState.ColReorder = [];
+
+            /* Resizing */
+            for ( i=0, iLen=columns.length ; i<iLen ; i++ )
+            {
+                oState.columns[i].width = columns[i].width;
+            }
 
             /* Sorting */
             if ( oState.aaSorting ) {
@@ -840,10 +873,16 @@
                         /* are we on the col border (if so, resize col) */
                         if (Math.abs(e.pageX - Math.round(offset.left + nLength)) <= 5)
                         {
-                            $(nThTarget).css({'cursor': 'col-resize'});
+                            // check if column is allowed for resizing
+                            if (that.s.dt.aoColumns[i].resizable === true) {
+                                $(nThTarget).css({'cursor': 'col-resize'});
+                            }
                         }
                         else
+                        // check if column is allowed for resizing
+                        if (that.s.dt.aoColumns[i].dragable === true) {
                             $(nThTarget).css({'cursor': 'pointer'});
+                        }
                     }
                 } );
             }
@@ -856,7 +895,6 @@
             } );
         },
 
-
         /**
          * Mouse down on a TH element in the table header
          *  @method  _fnMouseDown
@@ -868,9 +906,7 @@
          */
         "_fnMouseDown": function ( e, nTh, i )
         {
-            var
-                that = this,
-                aoColumns = this.s.dt.aoColumns;
+            var that = this;
 
             /* are we resizing a column ? */
             if ($(nTh).css('cursor') == 'col-resize') {
@@ -913,24 +949,24 @@
                 /* Add event handlers to the document */
                 $(document)
                     .on( 'mousemove.ColReorder', function (e) {
-                        that._fnMouseMove.call( that, e );
+                        that._fnMouseMove.call(that, e, i);
                     } )
                     .on( 'mouseup.ColReorder', function (e) {
-                        that._fnMouseUp.call( that, e );
+                        that._fnMouseUp.call(that, e, i);
                     } );
 
             }
 
             /* Add event handlers to the document */
             $(document).bind( 'mousemove.ColReorder', function (e) {
-                that._fnMouseMove.call( that, e, i); //Martin Marchetta: Added index of the call being dragged or resized
+                that._fnMouseMove.call(that, e, i); //Martin Marchetta: Added index of the call being dragged or resized
             } );
 
             $(document).bind( 'mouseup.ColReorder', function (e) {
                 //Martin Marcheta: Added this small delay in order to prevent collision with column sort feature (there must be a better
                 //way of doing this, but I don't have more time to digg into it)
                 setTimeout(function(){
-                    that._fnMouseUp.call( that, e, i );  //Martin Marchetta: Added index of the call being dragged or resized
+                    that._fnMouseUp.call(that, e, i );  //Martin Marchetta: Added index of the call being dragged or resized
                 }, 10);
             } );
         },
@@ -949,14 +985,19 @@
 
             /* are we resizing a column ? */
             if (this.dom.resize) {
+
+                // check if column is not allowed for resizing and return.
+                if (this.s.dt.aoColumns[colResized].resizable === false) {
+                    return;
+                }
+
                 var nTh = this.s.mouse.resizeElem;
                 var nThNext = $(nTh).next();
                 var moveLength = e.pageX-this.s.mouse.startX;
-
                 var scrollXEnabled = this.s.dt.sScrollX === undefined ? false: true;
-
                 var newWidth = this.s.mouse.startWidth + moveLength;
                 var minResizeWidth=this.s.minResizeWidth;
+
                 if (minResizeWidth=="initial") {
                     minResizeWidth=this.s.dt.aoColumns[colResized].sWidthOrig;
                     if (minResizeWidth!=null) {
@@ -1012,7 +1053,7 @@
                         // Resize the hidden header row in the body, this will cause the data rows to be resized
                         //  if resize style is greedy, change the size of the next column
                         if (moveLength != 0 && this.s.resizeStyle=="greedy"){
-                            $(scrollBodyTableHeadRow.childNodes[visibleColumnIndex+1]).width(this.s.mouse.nextStartWidth - moveLength);
+                            // $(scrollBodyTableHeadRow.childNodes[visibleColumnIndex+1]).width(this.s.mouse.nextStartWidth - moveLength);
                         }
                         // resize the actual th in the hidden header row
                         $(scrollBodyTableHeadRow.childNodes[visibleColumnIndex]).width(this.s.mouse.startWidth + moveLength);
@@ -1044,7 +1085,21 @@
                                 $(this.s.dt.nTable).width(this.table_size + moveLength);
                             }
                         }
+                        else {
+                            // bugfix for where table ths are automatically expanding when table size is bigger than th's calculated width
+                            var scrollHead = $(this.s.dt.nScrollHead);
+                            // get the width-calculating elements and set the width to a value that is too low to hold all th's
+                            var elems = scrollHead.find('.dataTables_scrollHeadInner, .dataTables_scrollHeadInner table').css('width', '100px');
+                            // get table head
+                            var thead = elems.find('thead');
+                            // get table head's real width
+                            var width = thead.outerWidth();
+
+                            // set the real width on the table
+                            elems.css('width', width);
+                        }
                     }
+
                     // resize style is table and no scroll x, so just resize the table
                     else if (this.s.resizeStyle=="table") {
                         //Keep the current table's width so that we can increase the original table width by the mouse move length
@@ -1062,6 +1117,12 @@
                 return;
             }
             else if (this.s.allowReorder) {
+
+                // check if column is not allowed for draging and return.
+                if (this.s.dt.aoColumns[colResized].dragable === false) {
+                    return;
+                }
+
                 if ( this.dom.drag === null )
                 {
                     /* Only create the drag element if the mouse has moved a specific distance from the start
@@ -1074,6 +1135,7 @@
                     {
                         return;
                     }
+
                     this._fnCreateDragNode();
                 }
 
@@ -1148,6 +1210,7 @@
                     this.s.dt.oInstance.fnAdjustColumnSizing();
                 }
 
+                // call drop callback if exists
                 if ( this.s.dropCallback !== null )
                 {
                     this.s.dropCallback.call( this );
@@ -1156,7 +1219,7 @@
                 ////////////
                 //Martin Marchetta: Re-initialize so as to register the new column order
                 //(otherwise the events remain bound to the original column indices)
-                this._fnConstruct();
+                // this._fnConstruct();
                 ///////////
 
                 /* Save the state */
@@ -1175,8 +1238,9 @@
                 //Re-enable column sorting
                 this.s.dt.aoColumns[colResized].bSortable = true;
 
-                //Save the new resized column's width
+                //Save the new resized column's width with old and new api
                 this.s.dt.aoColumns[colResized].sWidth = $(this.s.mouse.resizeElem).innerWidth() + "px";
+                this.s.dt.aoColumns[colResized].width = $(this.s.mouse.resizeElem).innerWidth() + "px";
 
                 //If other columns might have changed their size, save their size too
                 scrollXEnabled = this.s.dt.oInit.sScrollX === "" ? false:true;
@@ -1206,10 +1270,16 @@
                 }
 
                 //Update the internal storage of the table's width (in case we changed it because the user resized some column and scrollX was enabled
-                /*if(scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
-                 if($('div.dataTables_scrollHead', this.s.dt.nTableWrapper).length > 0)
-                 this.table_size = $($('div.dataTables_scrollHead', this.s.dt.nTableWrapper)[0].childNodes[0].childNodes[0]).width();
-                 }*/
+                //if(scrollXEnabled && $('div.dataTables_scrollHead', this.s.dt.nTableWrapper) != undefined){
+                //    if($('div.dataTables_scrollHead', this.s.dt.nTableWrapper).length > 0)
+                //        this.table_size = $($('div.dataTables_scrollHead', this.s.dt.nTableWrapper)[0].childNodes[0].childNodes[0]).width();
+                //}
+
+                // call resize callback if exists
+                if ( this.s.resizeCallback !== null )
+                {
+                    this.s.resizeCallback.call( this );
+                }
 
                 //Save the state
                 this.s.dt.oInstance.oApi._fnSaveState( this.s.dt );
@@ -1288,6 +1358,9 @@
             var origTable = origThead.parentNode;
             var cloneCell = $(origCell).clone();
 
+            // set cursor to move
+            $(cloneCell).css({'cursor': 'move'});
+
             // This is a slightly odd combination of jQuery and DOM, but it is the
             // fastest and least resource intensive way I could think of cloning
             // the table with just a single header cell in it.
@@ -1360,8 +1433,11 @@
          */
         "_fnSetColumnIndexes": function ()
         {
+            var _this = this;
             $.each( this.s.dt.aoColumns, function (i, column) {
                 $(column.nTh).attr('data-column-index', i);
+                // rebind mouse listener to keep resize event and other references on indices
+                _this._fnMouseListener( i, column.nTh );
             } );
         },
 
@@ -1438,7 +1514,7 @@
      *  @type      String
      *  @default   As code
      */
-    ColReorder.VERSION = "1.0.7";
+    ColReorder.VERSION = "1..7";
     ColReorder.prototype.VERSION = ColReorder.VERSION;
 
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
