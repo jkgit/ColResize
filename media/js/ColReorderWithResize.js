@@ -17,7 +17,6 @@
  * Modified:    September 16th 2012 by Hassan Kamara - h@phrmc.com
  * Modified:    February 26th 2014 by Jay kraly -jaykraly@gmail.com
  * Modified:    July 28th 2014 by Johann Zelger - j.zelger@techdivision.com (DataTables 1.10.x & ColReorder v1.1.2 compatibility)
- * Modified:    September 01th 2014 by Johann Zelger - j.zelger@techdivision.com (Fixed state saving and fixed some bugs)
  * Language:    Javascript
  * License:     GPL v2 or BSD 3 point style
  * Project:     DataTables
@@ -741,7 +740,7 @@
             if ( a.length != this.s.dt.aoColumns.length )
             {
                 this.s.dt.oInstance.oApi._fnLog( this.s.dt, 1, "ColReorder - array reorder does not "+
-                    "match known number of columns. Skipping." );
+                "match known number of columns. Skipping." );
                 return;
             }
 
@@ -1097,6 +1096,7 @@
 
                             // set the real width on the table
                             elems.css('width', width);
+                            $(this.s.dt.nScrollBody).find('table').css('width', width);
                         }
                     }
 
@@ -1130,7 +1130,7 @@
                      * possibly confusing drag element showing up
                      */
                     if ( Math.pow(
-                        Math.pow(e.pageX - this.s.mouse.startX, 2) +
+                            Math.pow(e.pageX - this.s.mouse.startX, 2) +
                             Math.pow(e.pageY - this.s.mouse.startY, 2), 0.5 ) < 5 )
                     {
                         return;
@@ -1367,12 +1367,12 @@
             this.dom.drag = $(origTable.cloneNode(false))
                 .addClass( 'DTCR_clonedTable' )
                 .append(
-                    origThead.cloneNode(false).appendChild(
-                        origTr.cloneNode(false).appendChild(
-                            cloneCell[0]
-                        )
+                origThead.cloneNode(false).appendChild(
+                    origTr.cloneNode(false).appendChild(
+                        cloneCell[0]
                     )
                 )
+            )
                 .css( {
                     position: 'absolute',
                     top: 0,
