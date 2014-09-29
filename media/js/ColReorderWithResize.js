@@ -1368,12 +1368,12 @@
             this.dom.drag = $(origTable.cloneNode(false))
                 .addClass( 'DTCR_clonedTable' )
                 .append(
-                origThead.cloneNode(false).appendChild(
-                    origTr.cloneNode(false).appendChild(
-                        cloneCell[0]
+                    origThead.cloneNode(false).appendChild(
+                        origTr.cloneNode(false).appendChild(
+                            cloneCell[0]
+                        )
                     )
                 )
-            )
                 .css( {
                     position: 'absolute',
                     top: 0,
