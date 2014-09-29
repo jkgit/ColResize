@@ -17,6 +17,7 @@
  * Modified:    September 16th 2012 by Hassan Kamara - h@phrmc.com
  * Modified:    February 26th 2014 by Jay kraly -jaykraly@gmail.com
  * Modified:    July 28th 2014 by Johann Zelger - j.zelger@techdivision.com (DataTables 1.10.x & ColReorder v1.1.2 compatibility)
+ * Modified:    September 01th 2014 by Johann Zelger - j.zelger@techdivision.com (Fixed state saving and fixed some bugs)
  * Language:    Javascript
  * License:     GPL v2 or BSD 3 point style
  * Project:     DataTables
