@@ -741,7 +741,7 @@
             if ( a.length != this.s.dt.aoColumns.length )
             {
                 this.s.dt.oInstance.oApi._fnLog( this.s.dt, 1, "ColReorder - array reorder does not "+
-                    "match known number of columns. Skipping." );
+                "match known number of columns. Skipping." );
                 return;
             }
 
@@ -1097,6 +1097,7 @@
 
                             // set the real width on the table
                             elems.css('width', width);
+                            $(this.s.dt.nScrollBody).find('table').css('width', width);
                         }
                     }
 
@@ -1130,7 +1131,7 @@
                      * possibly confusing drag element showing up
                      */
                     if ( Math.pow(
-                        Math.pow(e.pageX - this.s.mouse.startX, 2) +
+                            Math.pow(e.pageX - this.s.mouse.startX, 2) +
                             Math.pow(e.pageY - this.s.mouse.startY, 2), 0.5 ) < 5 )
                     {
                         return;
